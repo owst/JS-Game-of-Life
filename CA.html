@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>
+            CA
+        </title>
+        <script type="text/javascript"
+            src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js"></script>
+        <script type="text/javascript"
+            src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.9/jquery-ui.min.js"></script>
+        <link rel="stylesheet" type="text/css"
+        href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.9/themes/smoothness/jquery-ui.css"
+        />
+        <script type="text/javascript" src="CA.js"></script>
+        <script>
+            $(function () {
+                var jCanvas = $('#world');
+                var canvas = jCanvas.get(0);
+                var ctx = canvas.getContext('2d');
+                var width = canvas.width;
+                var height = canvas.height;
+                var startTimeout = 30;
+
+                var ca = new CA(ctx, width, height, startTimeout);
+
+                startStopHandler = function () {
+                    var button = $('#startStop');
+
+                    if (button.html() === 'Stop') {
+                        button.html('Start');
+
+                        clearTimeout(ca.timeout);
+                        ca.timeout = null;
+                    } else {
+                        button.html('Stop');
+
+                        ca.setupTimeout();
+                    }
+                };
+
+                randomise = function () {
+                    ca.randomData();
+                };
+
+                clearCtx = function () {
+                    ca.clear();
+                };
+
+                clearAndRandomise = function () {
+                    clearCtx();
+                    randomise();
+                };
+
+                jCanvas.mousedown(function (e) {
+                    var x = Math.round(e.offsetX / ca.pixelSize) * ca.pixelSize;
+                    var y = Math.round(e.offsetY / ca.pixelSize) * ca.pixelSize;
+
+                    ca.setPixelBlack(x, y);
+                });
+
+                $('#slider').slider({
+                    value: startTimeout,
+                    min: 10,
+                    max: 500,
+                    step: 10,
+                    slide: function (event, ui) {
+                        $('#timeout').val(ui.value);
+                        ca.timeoutTime = ui.value;
+
+                        if (ca.timeout) {
+                            clearTimeout(ca.timeout);
+                            ca.setupTimeout();
+                        }
+                    }
+                });
+
+                $('#timeout').val(startTimeout);
+
+
+                ca.initGliderGun(10, 300);
+            });
+        </script>
+    </head>
+    <body>
+        <h2>CA simulation</h2>
+        <canvas style="border: 1px solid black;" id="world" width="400"
+        height="360"></canvas><br/>
+        <button id="startStop" type="button"
+            onclick="startStopHandler()">Start</button>
+        <button id="clear" type="button" onclick="clearCtx()">Clear</button>
+        <button id="randomise" type="button"
+            onclick="randomise()">Randomise</button>
+        <button id="clearAndRandomise" type="button"
+            onclick="clearAndRandomise()">Clear and Randomise</button><br/>
+        <label for="timeout">Timeout period (ms):</label>
+	    <input type="text" id="timeout" disabled="true" style="width : 35px"/>
+        <div id="slider" style="width : 500px"></div>
+    </body>
+</html>

@@ -1,0 +1,7 @@
+JavaScript Game of Life
+=======================
+
+A JavaScript implementation of Conway's Game of Life Cellular Automaton (CA).
+
+See http://www.owenstephens.co.uk/programming/javascript-game-of-life for
+example usage and demo.
