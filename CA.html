@@ -55,7 +55,15 @@
                     var x = Math.round(e.offsetX / ca.pixelSize) * ca.pixelSize;
                     var y = Math.round(e.offsetY / ca.pixelSize) * ca.pixelSize;
 
-                    ca.setPixelBlack(x, y);
+                    if (e.which === 1) {
+                        ca.setPixelBlack(x, y);
+                    } else if (e.which === 3) {
+                        ca.clearPixel(x, y);
+                    }
+                });
+
+                jCanvas.bind("contextmenu", function (e) {
+                    return false;
                 });
 
                 $('#slider').slider({

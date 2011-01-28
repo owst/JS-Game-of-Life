@@ -92,6 +92,10 @@ CA.prototype.setPixelBlack = function (x, y) {
     this.ctx.fillRect(x, y, this.pixelSize, this.pixelSize);
 };
 
+CA.prototype.clearPixel = function (x, y) {
+    this.ctx.clearRect(x, y, this.pixelSize, this.pixelSize);
+};
+
 CA.prototype.clear = function () {
     this.ctx.clearRect(0, 0, this.width, this.height);
 };
