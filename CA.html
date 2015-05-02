@@ -44,11 +44,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 var jCanvas = $('#world');
                 var canvas = jCanvas.get(0);
                 var ctx = canvas.getContext('2d');
-                var width = canvas.width;
-                var height = canvas.height;
+                var pixelSize = 6;
+                var width = canvas.width / pixelSize;
+                var height = canvas.height / pixelSize;
                 var startTimeout = 30;
 
-                var ca = new CA(ctx, width, height, startTimeout);
+                var ca = new CA(ctx, width, height, pixelSize, startTimeout);
 
                 startStopHandler = function () {
                     var button = $('#startStop');
@@ -87,11 +88,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     } else if (e.which === 3) {
                         ca.clearPixel(x, y);
                     }
-                });
+               });
 
-                jCanvas.bind("contextmenu", function (e) {
-                    return false;
-                });
+               jCanvas.bind("contextmenu", function (e) {
+                   return false;
+               });
 
                 $('#slider').slider({
                     value: startTimeout,
@@ -112,23 +113,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 $('#timeout').val(startTimeout);
 
 
-                ca.initGliderGun(10, 300);
+                ca.initGliderGun(10, 40);
+                ca.initGliderGun(60, 10);
             });
+
         </script>
     </head>
     <body>
         <h2>CA simulation</h2>
-        <canvas style="border: 1px solid black;" id="world" width="400"
-        height="360"></canvas><br/>
+        <canvas style="border: 1px solid black;" id="world" width="600" height="420"></canvas>
+        <br/>
         <button id="startStop" type="button"
             onclick="startStopHandler()">Start</button>
         <button id="clear" type="button" onclick="clearCtx()">Clear</button>
         <button id="randomise" type="button"
             onclick="randomise()">Randomise</button>
         <button id="clearAndRandomise" type="button"
-            onclick="clearAndRandomise()">Clear and Randomise</button><br/>
+            onclick="clearAndRandomise()">Clear and Randomise</button>  
         <label for="timeout">Timeout period (ms):</label>
-	    <input type="text" id="timeout" disabled="true" style="width : 35px"/>
+        <input type="text" id="timeout" disabled="true" style="width : 35px"/>
         <div id="slider" style="width : 500px"></div>
     </body>
 </html>

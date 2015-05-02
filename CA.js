@@ -25,13 +25,26 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-function CA(ctx, width, height, startTimeout) {
-    this.ctx = ctx;
+function CA(canvas, width, height, pixelSize, startTimeout) {
+    this.canvas = canvas;
     this.width = width;
     this.height = height;
-    // Must be an equal divisor of width and height.
-    this.pixelSize = 4;
+    // canvas.width (height) must be width * pixelSize (height * pixelSize).
+    this.pixelSize = pixelSize;
     this.timeoutTime = startTimeout;
+    this.pixelsLive = [];
+
+    for (var x = 0; x < width; x++) {
+        this.pixelsLive[x] = [];
+        for (var y = 0; y < height; y++) {
+            this.pixelsLive[x][y] = false;
+        }
+    }
+
+    // Create a copy of the pixels to use as a buffer.
+    this.bufferPixelsLive = this.pixelsLive.map(function(row) {
+        return row.slice();
+    });
 }
 
 CA.prototype.setupTimeout = function () {
@@ -43,54 +56,58 @@ CA.prototype.setupTimeout = function () {
 };
 
 CA.prototype.timeoutHandler = function () {
-    var imgData = this.ctx.getImageData(0, 0, this.width, this.height),
-        x, y;
-
-    this.ctx.clearRect(0, 0, this.width, this.height);
-
-    // Check every pixel for liveness, for the next generation.
-    for (y = 0; y < this.height; y += this.pixelSize) {
-        for (x = 0; x < this.width; x += this.pixelSize) {
-            if (this.shouldLive(imgData, x, y)) {
-                this.setPixelBlack(x, y);
-            }
+    // Write each pixel into the buffer, to ensure we only use the old values
+    // to determine the new values.
+    for (var x = 0; x < this.width; x++) {
+        for (var y = 0; y < this.height; y++) {
+            this.bufferPixelsLive[x][y] = this.shouldLive(x, y);
         }
     }
+
+    // Swap buffers
+    var temp = this.pixelsLive;
+    this.pixelsLive = this.bufferPixelsLive;
+    this.bufferPixelsLive = temp;
+
+    this.paintImage();
 
     this.setupTimeout();
 };
 
+CA.prototype.offsets = (function () {
+    var coordOffsets = [-1, 0, 1];
+    var offsets = [];
+
+    coordOffsets.map(function(xOffset) {
+        coordOffsets.map(function(yOffset) {
+            if (xOffset != 0 || yOffset != 0) {
+                offsets.push({x: xOffset, y: yOffset});
+            }
+        });
+    });
+
+    return offsets;
+})();
+
 // Returns true if the pixel should be live next, false otherwise.
-CA.prototype.shouldLive = function (imgData, x, y) {
-    var setNeighbourCount = 0,
-        offsets = [-this.pixelSize, 0, this.pixelSize],
-        off, off2;
+CA.prototype.shouldLive = function (x, y) {
+    var neighboursLive = 0;
 
-    for (off in offsets) {
-        for (off2 in offsets) {
-            // Don't count the current pixel.
-            if (offsets[off] === 0 && offsets[off2] === 0) {
-                continue;
-            }
-
-            if (this.isPixelBlack(imgData, x + offsets[off],
-                        y + offsets[off2])) {
-                setNeighbourCount++;
-            }
+    // Calculate the number of neighbours that are live.
+    this.offsets.forEach(function(offsets) {
+        if (this.isPixelSet(x + offsets.x, y + offsets.y)) {
+            neighboursLive++;
         }
-    }
+    }, this);
 
-    var isLive = this.isPixelBlack(imgData, x, y);
-
-    if ((!isLive && setNeighbourCount === 3) ||
-        (isLive && (setNeighbourCount === 2 || setNeighbourCount === 3))) {
+    if (neighboursLive == 3 || (this.isPixelSet(x, y) && neighboursLive == 2)) {
         return true;
+    } else {
+        return false;
     }
-
-    return false;
 };
 
-CA.prototype.isPixelBlack = function (imgData, x, y) {
+CA.prototype.isPixelSet = function (x, y) {
     // Wrap positions, creating a toroidal array.
     x = x % this.width;
     if (x < 0) {
@@ -102,49 +119,49 @@ CA.prototype.isPixelBlack = function (imgData, x, y) {
         y += this.height;
     }
 
-    // 4 bytes per pixel (rgba)
-    var cell = (x + y * this.width) * 4;
-
-    // Since we only use black and white, just check the red and alpha values.
-    // N.B. only check the top left pixel values, we assume that real pixels are
-    // only set in blocks of pixelSize.
-    if (imgData.data[cell] === 0 && imgData.data[cell + 3] === 255) {
-        return true;
-    }
-
-    return false;
+    return this.pixelsLive[x][y];
 };
 
-CA.prototype.setPixelBlack = function (x, y) {
-    this.ctx.fillRect(x, y, this.pixelSize, this.pixelSize);
-};
+CA.prototype.paintImage = function (x, y) {
+    var size = this.pixelSize;
 
-CA.prototype.clearPixel = function (x, y) {
-    this.ctx.clearRect(x, y, this.pixelSize, this.pixelSize);
-};
+    // First, clear exisiting image.
+    this.canvas.clearRect(0, 0, this.width * size, this.height * size);
 
-CA.prototype.clear = function () {
-    this.ctx.clearRect(0, 0, this.width, this.height);
-};
-
-CA.prototype.randomData = function () {
-    var x, y;
-    for (y = 0; y < this.height; y += this.pixelSize) {
-        for (x = 0; x < this.width; x += this.pixelSize) {
-            if (Math.random() < 0.1) {
-                this.setPixelBlack(x, y);
+    for (var x = 0; x < this.width; x++) {
+        for (var y = 0; y < this.height; y++) {
+            if (this.pixelsLive[x][y]) {
+                this.canvas.fillRect(x * size, y * size, size, size);
             }
         }
     }
 };
 
-CA.prototype.initGliderGun = function (x, y) {
-    var thisObj = this;
-    var setOffsetPixel = function (xOff, yOff) {
-        thisObj.setPixelBlack(x + xOff * thisObj.pixelSize,
-                y + yOff * thisObj.pixelSize);
-    };
+CA.prototype.clear = function () {
+    this.setEach(function (x, y) {
+        return false;
+    });
+};
 
+CA.prototype.randomData = function () {
+    var live = this.pixelsLive;
+
+    this.setEach(function (x, y) {
+        return live[x][y] || Math.random() < 0.1;
+    });
+}
+
+CA.prototype.setEach = function (shouldSetFunction) {
+    for (var x = 0; x < this.width; x++) {
+        for (var y = 0; y < this.height; y++) {
+            this.pixelsLive[x][y] = shouldSetFunction(x, y);
+        }
+    }
+
+    this.paintImage();
+};
+
+CA.prototype.initGliderGun = function (x, y) {
     var coords = [
         [24, 0], [22, 1], [24, 1], [12, 2], [13, 2],
         [20, 2], [21, 2], [34, 2], [35, 2], [11, 3],
@@ -156,9 +173,10 @@ CA.prototype.initGliderGun = function (x, y) {
         [13, 8]
     ];
 
-    var i;
-    for (var i in coords) {
-        setOffsetPixel(coords[i][0], coords[i][1]);
-    }
+    coords.forEach(function(offsets) {
+        this.pixelsLive[x + offsets[0]][y + offsets[1]] = true;
+    }, this);
+
+    this.paintImage();
 };
 
